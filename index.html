@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TendoSW-Link — Switch × Discord</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23E4000F'/><circle cx='10' cy='16' r='5' fill='white'/><rect x='17' y='8' width='10' height='16' rx='3' fill='white'/></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Design tokens ──────────────────────────────────────────────────────── */
+    :root {
+      --red:        #E4000F;
+      --red-dark:   #A8000B;
+      --red-glow:   rgba(228, 0, 15, 0.35);
+      --blue:       #0AB9E6;
+      --blue-dark:  #0880A4;
+      --blue-glow:  rgba(10, 185, 230, 0.30);
+      --bg:         #0D0D10;
+      --surface:    #16161C;
+      --surface2:   #1E1E27;
+      --border:     rgba(255,255,255,0.07);
+      --text:       #E8E8F0;
+      --muted:      #7070A0;
+      --green:      #39D353;
+      --yellow:     #F5A623;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Scanlines atmosphere ───────────────────────────────────────────────── */
+    body::before {
+      content: '';
+      pointer-events: none;
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.08) 3px,
+        rgba(0,0,0,0.08) 4px
+      );
+      z-index: 9999;
+    }
+
+    /* ── Typography ─────────────────────────────────────────────────────────── */
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Logo / wordmark ────────────────────────────────────────────────────── */
+    .logo {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logo-switch { color: var(--red); }
+    .logo-sep    { color: var(--muted); font-weight: 300; }
+    .logo-disc   { color: var(--blue); }
+
+    /* ── Neon pill badge ────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+    }
+    .badge-red  { background: rgba(228,0,15,0.15); color: var(--red); border: 1px solid rgba(228,0,15,0.3); }
+    .badge-blue { background: rgba(10,185,230,0.12); color: var(--blue); border: 1px solid rgba(10,185,230,0.25); }
+    .badge-green{ background: rgba(57,211,83,0.12); color: var(--green); border: 1px solid rgba(57,211,83,0.25); }
+    .badge-yellow{background: rgba(245,166,35,0.12); color: var(--yellow); border: 1px solid rgba(245,166,35,0.25); }
+
+    /* ── Card ───────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.4rem;
+    }
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ── Buttons ────────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600; font-size: 0.9rem;
+      padding: 0.7rem 1.4rem;
+      border-radius: 10px;
+      border: none; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-red {
+      background: var(--red);
+      color: white;
+      box-shadow: 0 0 18px var(--red-glow);
+    }
+    .btn-red:hover:not(:disabled) { box-shadow: 0 0 30px var(--red-glow); }
+
+    .btn-blue {
+      background: var(--blue);
+      color: #0D0D10;
+      box-shadow: 0 0 18px var(--blue-glow);
+    }
+    .btn-blue:hover:not(:disabled) { box-shadow: 0 0 30px var(--blue-glow); }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: #26262F; }
+
+    .btn-danger {
+      background: rgba(228,0,15,0.12);
+      color: var(--red);
+      border: 1px solid rgba(228,0,15,0.25);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(228,0,15,0.2); }
+
+    /* ── Input ──────────────────────────────────────────────────────────────── */
+    .input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      padding: 0.65rem 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(10,185,230,0.12);
+    }
+    .input::placeholder { color: var(--muted); }
+
+    /* ── Toggle switch ──────────────────────────────────────────────────────── */
+    .toggle-wrap { display: flex; align-items: center; gap: 0.8rem; cursor: pointer; }
+    .toggle {
+      position: relative; width: 48px; height: 26px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 99px;
+      transition: background 0.25s, box-shadow 0.25s;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      background: var(--muted);
+      border-radius: 50%;
+      transition: transform 0.25s, background 0.25s;
+    }
+    .toggle.on {
+      background: var(--blue);
+      border-color: var(--blue);
+      box-shadow: 0 0 12px var(--blue-glow);
+    }
+    .toggle.on::after { transform: translateX(22px); background: white; }
+
+    /* ── Avatar ─────────────────────────────────────────────────────────────── */
+    .avatar-ring {
+      border-radius: 50%;
+      padding: 3px;
+      background: linear-gradient(135deg, var(--red), var(--blue));
+    }
+    .avatar-ring img {
+      border-radius: 50%;
+      display: block;
+      border: 3px solid var(--bg);
+    }
+
+    /* ── Timer ──────────────────────────────────────────────────────────────── */
+    .timer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 500;
+      color: var(--blue);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── Terminal log ───────────────────────────────────────────────────────── */
+    .terminal {
+      background: #09090C;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      height: 180px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.73rem;
+      line-height: 1.6;
+    }
+    .terminal::-webkit-scrollbar { width: 4px; }
+    .terminal::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
+
+    .log-info    { color: var(--blue); }
+    .log-success { color: var(--green); }
+    .log-error   { color: var(--red); }
+    .log-warn    { color: var(--yellow); }
+    .log-muted   { color: var(--muted); }
+
+    /* ── Discord preview card ───────────────────────────────────────────────── */
+    .discord-preview {
+      background: #36393F;
+      border-radius: 10px;
+      padding: 1rem;
+      border-left: 4px solid var(--blue);
+      font-size: 0.8rem;
+    }
+    .discord-preview .dp-title { color: #DCDDDE; font-weight: 600; margin-bottom: 0.2rem; }
+    .discord-preview .dp-game  { color: #43B581; font-weight: 700; font-size: 0.85rem; }
+    .discord-preview .dp-state { color: #B9BBBE; }
+    .discord-preview .dp-time  { color: #72767D; font-size: 0.73rem; margin-top: 0.4rem; font-family: 'JetBrains Mono', monospace; }
+
+    /* ── Box art ────────────────────────────────────────────────────────────── */
+    .boxart {
+      border-radius: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
+    }
+
+    /* ── Pulse dot ──────────────────────────────────────────────────────────── */
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+    .pulse { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+    /* ── Glow divider ───────────────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border) 30%, var(--border) 70%, transparent);
+      margin: 1.5rem 0;
+    }
+
+    /* ── Hero gradient overlay ──────────────────────────────────────────────── */
+    .hero-glow {
+      position: fixed; pointer-events: none;
+      top: -200px; left: -200px;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(228,0,15,0.06) 0%, transparent 70%);
+      z-index: 0;
+    }
+    .hero-glow-blue {
+      position: fixed; pointer-events: none;
+      bottom: -200px; right: -200px;
+      width: 700px; height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(10,185,230,0.05) 0%, transparent 70%);
+      z-index: 0;
+    }
+
+    /* ── Splatoon badge ─────────────────────────────────────────────────────── */
+    .splat-badge {
+      background: linear-gradient(135deg, #F0461A 0%, #FF6B35 100%);
+      border-radius: 10px;
+      padding: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    /* ── Section ────────────────────────────────────────────────────────────── */
+    .section-hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="hero-glow"></div>
+  <div class="hero-glow-blue"></div>
+
+  <!-- ── Nav ─────────────────────────────────────────────────────────────────── -->
+  <nav style="position:sticky;top:0;z-index:100;background:rgba(13,13,16,0.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);">
+    <div style="max-width:1100px;margin:0 auto;padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;">
+      <div class="logo">
+        <svg width="28" height="20" viewBox="0 0 28 20" fill="none">
+          <rect width="11" height="20" rx="5.5" fill="#E4000F"/>
+          <circle cx="5.5" cy="9.5" r="3" fill="white"/>
+          <rect x="17" y="0" width="11" height="20" rx="5.5" fill="#0AB9E6"/>
+          <rect x="20" y="4" width="5" height="2" rx="1" fill="white"/>
+          <rect x="22" y="4" width="2" height="6" rx="1" fill="white"/>
+        </svg>
+        <span class="logo-switch">Tendo</span><span class="logo-sep">SW</span><span class="logo-disc">-Link</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <div id="nav-status" class="badge badge-red" style="display:none;">
+          <span class="pulse" style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;"></span>
+          Syncing
+        </div>
+        <button id="btn-disconnect" class="btn btn-danger" style="font-size:0.8rem;padding:0.45rem 1rem;display:none;" onclick="App.disconnect()">
+          Disconnect
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Main content ─────────────────────────────────────────────────────────── -->
+  <main style="max-width:1100px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index:1;">
+
+    <!-- ════════════════════════════════════════════════════════
+         LANDING / UNAUTHENTICATED VIEW
+    ═══════════════════════════════════════════════════════════ -->
+    <section id="view-landing">
+      <div style="min-height:70vh;display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;max-width:480px;">
+          <!-- Big icon -->
+          <div style="margin-bottom:2rem;display:flex;justify-content:center;gap:1rem;align-items:center;">
+            <svg width="72" height="50" viewBox="0 0 72 50" fill="none">
+              <rect width="28" height="50" rx="14" fill="#E4000F"/>
+              <circle cx="14" cy="24" r="7.5" fill="white"/>
+              <rect x="44" y="0" width="28" height="50" rx="14" fill="#0AB9E6"/>
+              <rect x="51" y="11" width="13" height="4" rx="2" fill="white"/>
+              <rect x="57" y="11" width="4" height="15" rx="2" fill="white"/>
+            </svg>
+            <span style="font-size:2.5rem;color:var(--muted);">×</span>
+            <svg width="52" height="50" viewBox="0 0 52 50" fill="none">
+              <circle cx="26" cy="25" r="25" fill="#5865F2"/>
+              <path d="M35 18c-2.1-.96-4.35-1.66-6.7-2.06-.28.53-.62 1.24-.85 1.8a25.5 25.5 0 0 0-7.9 0 20.3 20.3 0 0 0-.86-1.8C16.34 16.34 14.1 17.04 12 18c-4.25 6.34-5.4 12.52-4.83 18.6A26.8 26.8 0 0 0 15.4 40a20 20 0 0 0 1.74-2.87 16.7 16.7 0 0 1-2.72-1.32c.23-.17.45-.34.66-.52a18.7 18.7 0 0 0 16.23 0c.22.18.44.35.67.52-.87.52-1.78.96-2.73 1.33A20 20 0 0 0 20.78 40h-.01a26.7 26.7 0 0 0 8.23 3.6c.14.02.27-.04.34-.16.59-1.6 1-3.25 1.24-4.93a.26.26 0 0 0-.16-.29 17.5 17.5 0 0 1-2.47-1.19c.2-.14.4-.3.58-.45a13.4 13.4 0 0 0 11.6 0c.19.15.38.31.58.45-.81.46-1.63.85-2.47 1.2a.26.26 0 0 0-.16.28 30.8 30.8 0 0 0 1.24 4.93c.07.12.2.18.34.16A26.6 26.6 0 0 0 47.6 40c.7-7.12-1.19-13.25-4.6-18.6ZM21.5 33.3c-1.7 0-3.1-1.6-3.1-3.56 0-1.97 1.37-3.57 3.1-3.57 1.74 0 3.13 1.6 3.1 3.57 0 1.96-1.37 3.56-3.1 3.56Zm11.46 0c-1.7 0-3.1-1.6-3.1-3.56 0-1.97 1.36-3.57 3.1-3.57 1.73 0 3.12 1.6 3.1 3.57 0 1.96-1.37 3.56-3.1 3.56Z" fill="white"/>
+            </svg>
+          </div>
+
+          <h1 style="font-size:2.4rem;font-weight:700;letter-spacing:-0.03em;margin:0 0 0.75rem;">
+            Your Switch life,<br/>on Discord.
+          </h1>
+          <p style="color:var(--muted);font-size:1rem;line-height:1.6;margin:0 0 2.5rem;">
+            Connect your Nintendo Switch presence to Discord Rich Presence in real time.
+            Games, timers, Splatoon maps — all synced automatically.
+          </p>
+
+          <a href="https://discord.com/oauth2/authorize?client_id=1518853568743084102&response_type=code&redirect_uri=https%3A%2F%2Faddictive-gamer.github.io%2FTendoSW-Link%2F&scope=identify+activities.write"
+             class="btn btn-blue" style="font-size:1rem;padding:0.85rem 2rem;border-radius:12px;">
+            <svg width="20" height="20" viewBox="0 0 52 50" fill="none">
+              <circle cx="26" cy="25" r="25" fill="white" fill-opacity="0.15"/>
+              <path d="M35 18c-2.1-.96-4.35-1.66-6.7-2.06-.28.53-.62 1.24-.85 1.8a25.5 25.5 0 0 0-7.9 0 20.3 20.3 0 0 0-.86-1.8C16.34 16.34 14.1 17.04 12 18c-4.25 6.34-5.4 12.52-4.83 18.6A26.8 26.8 0 0 0 15.4 40a20 20 0 0 0 1.74-2.87 16.7 16.7 0 0 1-2.72-1.32c.23-.17.45-.34.66-.52a18.7 18.7 0 0 0 16.23 0c.22.18.44.35.67.52-.87.52-1.78.96-2.73 1.33A20 20 0 0 0 20.78 40h-.01a26.7 26.7 0 0 0 8.23 3.6c.14.02.27-.04.34-.16.59-1.6 1-3.25 1.24-4.93a.26.26 0 0 0-.16-.29 17.5 17.5 0 0 1-2.47-1.19c.2-.14.4-.3.58-.45a13.4 13.4 0 0 0 11.6 0c.19.15.38.31.58.45-.81.46-1.63.85-2.47 1.2a.26.26 0 0 0-.16.28 30.8 30.8 0 0 0 1.24 4.93c.07.12.2.18.34.16A26.6 26.6 0 0 0 47.6 40c.7-7.12-1.19-13.25-4.6-18.6Z" fill="white"/>
+            </svg>
+            Connect with Discord
+          </a>
+
+          <p style="color:var(--muted);font-size:0.78rem;margin-top:1.2rem;">
+            Requires <code class="mono" style="color:var(--blue);">identify</code> + <code class="mono" style="color:var(--blue);">activities.write</code> scopes only.
+            No messages, no guilds.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         SETUP VIEW (Discord authed, nxapi not configured)
+    ═══════════════════════════════════════════════════════════ -->
+    <section id="view-setup" class="section-hidden">
+      <div style="max-width:520px;margin:4rem auto;">
+        <div class="card">
+          <div class="card-title">
+            <svg width="14" height="14" fill="var(--blue)" viewBox="0 0 16 16"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1a6 6 0 1 1 0 12A6 6 0 0 1 8 2zm-.5 4.5h1v4h-1V6.5zm0 5h1v1h-1v-1z"/></svg>
+            nxapi Configuration
+          </div>
+
+          <p style="color:var(--muted);font-size:0.85rem;margin:0 0 1.2rem;line-height:1.6;">
+            Enter your nxapi presence endpoint URL. This is the JSON endpoint that exposes
+            your Nintendo Switch presence data (provided by your nxapi instance).
+          </p>
+
+          <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.4rem;">
+            nxapi Presence JSON URL
+          </label>
+          <input id="input-nxapi-url" type="url" class="input"
+            placeholder="https://nxapi-auth.fancy.org.uk/api/znc/user/presence" />
+
+          <p style="font-size:0.73rem;color:var(--muted);margin:0.5rem 0 1.4rem;">
+            Example: <code class="mono">https://nxapi-auth.fancy.org.uk/...</code><br/>
+            The endpoint must return a JSON presence object publicly (or with your token below).
+          </p>
+
+          <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.4rem;">
+            nxapi Bearer Token <span style="color:var(--muted);font-weight:400;">(optional)</span>
+          </label>
+          <input id="input-nxapi-token" type="password" class="input"
+            placeholder="eyJhbGci..." />
+
+          <div style="margin-top:1.5rem;display:flex;gap:0.75rem;">
+            <button class="btn btn-blue" style="flex:1;" onclick="App.saveNxapiConfig()">
+              Save &amp; Test Connection
+            </button>
+          </div>
+
+          <div id="setup-status" style="margin-top:1rem;font-size:0.82rem;display:none;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         DASHBOARD VIEW
+    ═══════════════════════════════════════════════════════════ -->
+    <section id="view-dashboard" class="section-hidden">
+
+      <!-- Top row: profile + sync toggle -->
+      <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start;margin-bottom:1.5rem;">
+
+        <!-- Profile card -->
+        <div class="card" style="display:flex;align-items:center;gap:1.2rem;">
+          <div class="avatar-ring" id="profile-avatar-wrap">
+            <img id="profile-avatar" src="" alt="Avatar" width="56" height="56" style="border-radius:50%;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2256%22 height=%2256%22 viewBox=%220 0 56 56%22><rect width=%2256%22 height=%2256%22 fill=%22%23E4000F%22/><text x=%2228%22 y=%2236%22 font-size=%2224%22 text-anchor=%22middle%22 fill=%22white%22>?</text></svg>'" />
+          </div>
+          <div>
+            <div style="font-weight:600;font-size:1.05rem;" id="profile-name">—</div>
+            <div class="mono" style="font-size:0.78rem;color:var(--muted);" id="profile-fc">SW-????-????-????</div>
+            <div id="profile-discord" style="font-size:0.78rem;color:var(--muted);margin-top:0.15rem;"></div>
+          </div>
+          <div style="margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;">
+            <div id="profile-status-badge" class="badge badge-red" style="display:none;">
+              <span class="pulse" style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;"></span>
+              Online
+            </div>
+            <div id="profile-offline-badge" class="badge badge-yellow" style="display:none;">Offline</div>
+          </div>
+        </div>
+
+        <!-- Sync card -->
+        <div class="card" style="min-width:200px;">
+          <div class="card-title">Discord Sync</div>
+          <label class="toggle-wrap" onclick="App.toggleSync()">
+            <div class="toggle" id="toggle-sync"></div>
+            <span id="toggle-label" style="font-size:0.85rem;color:var(--muted);">Paused</span>
+          </label>
+          <div style="margin-top:1rem;font-size:0.75rem;color:var(--muted);">
+            Polls every <span id="poll-interval-label">15</span>s
+          </div>
+          <div style="margin-top:0.5rem;">
+            <button class="btn btn-ghost" style="font-size:0.75rem;padding:0.35rem 0.7rem;width:100%;" onclick="App.fetchNow()">
+              Refresh Now
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Now playing -->
+      <div class="card" style="margin-bottom:1.5rem;" id="card-now-playing">
+        <div class="card-title">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="var(--red)"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm3.5 11.5l-5-3V4h1v4l4 2.5-1 1z"/></svg>
+          Now Playing
+        </div>
+        <div id="now-playing-content">
+          <div style="color:var(--muted);font-size:0.85rem;">No game active — Switch is idle.</div>
+        </div>
+      </div>
+
+      <!-- Splatoon 3 special section -->
+      <div class="card section-hidden" id="card-splatoon" style="margin-bottom:1.5rem;">
+        <div class="card-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F0461A"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+          Splatoon 3 Status
+        </div>
+        <div id="splatoon-content"></div>
+      </div>
+
+      <!-- Bottom row: Discord preview + Terminal log -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+
+        <!-- Discord activity preview -->
+        <div class="card">
+          <div class="card-title">
+            Activity Preview
+            <span style="margin-left:auto;" class="badge badge-blue">Discord</span>
+          </div>
+          <div id="discord-preview-content">
+            <div class="discord-preview">
+              <div class="dp-title">Playing a game on Nintendo Switch</div>
+              <div class="dp-game" id="dp-game-name">—</div>
+              <div class="dp-state" id="dp-state">Waiting to start sync...</div>
+              <div class="dp-time" id="dp-time"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal log -->
+        <div class="card">
+          <div class="card-title">
+            Activity Log
+            <button onclick="App.clearLog()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;padding:0;">Clear</button>
+          </div>
+          <div class="terminal" id="terminal"></div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ── Config modal for nxapi URL ─────────────────────────────────────────── -->
+  <div id="modal-config" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:200;display:none;align-items:center;justify-content:center;">
+    <div class="card" style="max-width:480px;width:100%;margin:1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div class="card-title" style="margin-bottom:0;">Edit nxapi Config</div>
+        <button onclick="App.closeModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;">✕</button>
+      </div>
+      <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:0.4rem;">Presence JSON URL</label>
+      <input id="modal-nxapi-url" type="url" class="input" placeholder="https://..." />
+      <label style="font-size:0.8rem;color:var(--muted);display:block;margin:0.8rem 0 0.4rem;">Bearer Token (optional)</label>
+      <input id="modal-nxapi-token" type="password" class="input" placeholder="eyJhbGci..." />
+      <button class="btn btn-blue" style="width:100%;margin-top:1rem;" onclick="App.saveNxapiConfig(true)">Save</button>
+    </div>
+  </div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CONFIG  — update WORKER_URL after deploying your Cloudflare Worker
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const CONFIG = {
+  WORKER_URL:        'https://tendosw-link-api.addictivegamer.workers.dev',
+  DISCORD_CLIENT_ID: '1518853568743084102',
+  REDIRECT_URI:      'https://addictive-gamer.github.io/TendoSW-Link/',
+  POLL_INTERVAL_MS:  15000,
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STATE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const State = {
+  discordToken:   null,   // { access_token, refresh_token, expires_at }
+  discordUser:    null,   // { id, username, discriminator, avatar }
+  nxapiUrl:       null,
+  nxapiToken:     null,
+  syncing:        false,
+  pollTimer:      null,
+  gameStartedAt:  null,   // ms since epoch when current game was first detected
+  currentGameId:  null,
+  timerInterval:  null,
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PERSISTENCE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const Store = {
+  save() {
+    try {
+      localStorage.setItem('tsw_discord_token', JSON.stringify(State.discordToken));
+      localStorage.setItem('tsw_discord_user',  JSON.stringify(State.discordUser));
+      localStorage.setItem('tsw_nxapi_url',     State.nxapiUrl || '');
+      localStorage.setItem('tsw_nxapi_token',   State.nxapiToken || '');
+      localStorage.setItem('tsw_syncing',       State.syncing ? '1' : '0');
+    } catch(e) {}
+  },
+  load() {
+    try {
+      State.discordToken = JSON.parse(localStorage.getItem('tsw_discord_token') || 'null');
+      State.discordUser  = JSON.parse(localStorage.getItem('tsw_discord_user')  || 'null');
+      State.nxapiUrl     = localStorage.getItem('tsw_nxapi_url')   || null;
+      State.nxapiToken   = localStorage.getItem('tsw_nxapi_token') || null;
+      State.syncing      = localStorage.getItem('tsw_syncing') === '1';
+    } catch(e) {}
+  },
+  clear() {
+    ['tsw_discord_token','tsw_discord_user','tsw_nxapi_url','tsw_nxapi_token','tsw_syncing']
+      .forEach(k => localStorage.removeItem(k));
+  },
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TERMINAL LOG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function log(msg, type='info') {
+  const el = document.getElementById('terminal');
+  if (!el) return;
+  const ts = new Date().toTimeString().slice(0,8);
+  const cls = { info:'log-info', success:'log-success', error:'log-error', warn:'log-warn', muted:'log-muted' }[type] || 'log-info';
+  const tag = { info:'INFO', success:' OK ', error:'ERR ', warn:'WARN', muted:'----' }[type] || 'INFO';
+  const line = document.createElement('div');
+  line.innerHTML = `<span class="log-muted">${ts}</span> [<span class="${cls}">${tag}</span>] <span class="${cls}">${msg}</span>`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// VIEWS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function showView(name) {
+  ['landing','setup','dashboard'].forEach(v => {
+    document.getElementById(`view-${v}`).classList.toggle('section-hidden', v !== name);
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DISCORD AUTH
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function exchangeCode(code) {
+  log('Exchanging OAuth2 code with worker...', 'info');
+  const res = await fetch(`${CONFIG.WORKER_URL}/api/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Worker returned ${res.status}`);
+  }
+  const data = await res.json();
+  State.discordToken = {
+    access_token:  data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at:    Date.now() + data.expires_in * 1000,
+  };
+  log('OAuth2 code exchanged successfully.', 'success');
+}
+
+async function fetchDiscordUser() {
+  log('Fetching Discord profile...', 'info');
+  const res = await fetch('https://discord.com/api/v10/users/@me', {
+    headers: { Authorization: `Bearer ${State.discordToken.access_token}` },
+  });
+  if (!res.ok) throw new Error('Failed to fetch Discord user.');
+  State.discordUser = await res.json();
+  log(`Logged in as @${State.discordUser.username}`, 'success');
+}
+
+async function refreshDiscordToken() {
+  if (!State.discordToken?.refresh_token) return false;
+  try {
+    log('Refreshing Discord token...', 'warn');
+    const res = await fetch(`${CONFIG.WORKER_URL}/api/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: State.discordToken.refresh_token }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    State.discordToken = {
+      access_token:  data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at:    Date.now() + data.expires_in * 1000,
+    };
+    Store.save();
+    log('Token refreshed.', 'success');
+    return true;
+  } catch { return false; }
+}
+
+async function ensureValidToken() {
+  if (!State.discordToken) return false;
+  if (Date.now() > State.discordToken.expires_at - 60_000) {
+    return await refreshDiscordToken();
+  }
+  return true;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NXAPI FETCH
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function fetchPresence() {
+  if (!State.nxapiUrl) return null;
+  const headers = { Accept: 'application/json' };
+  if (State.nxapiToken) headers['Authorization'] = `Bearer ${State.nxapiToken}`;
+  const res = await fetch(State.nxapiUrl, { headers });
+  if (!res.ok) throw new Error(`nxapi returned ${res.status}`);
+  return await res.json();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DISCORD ACTIVITY UPDATE (activities.write)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function pushActivity(presence) {
+  if (!(await ensureValidToken())) {
+    log('Token invalid — cannot push activity.', 'error');
+    return;
+  }
+
+  // Build activity payload from nxapi presence data
+  const game = presence?.presence?.game;
+  const isPlaying = presence?.presence?.state === 'PLAYING' || !!game;
+
+  let activity = null;
+
+  if (isPlaying && game) {
+    // Track game start time
+    if (State.currentGameId !== game.titleId) {
+      State.currentGameId = game.titleId;
+      State.gameStartedAt = Date.now();
+    }
+
+    activity = {
+      type: 0, // Playing
+      name: game.name || 'Nintendo Switch',
+      details: game.name || 'Playing on Nintendo Switch',
+      state: `via TendoSW-Link`,
+      timestamps: { start: Math.floor(State.gameStartedAt / 1000) },
+      assets: {
+        large_image: game.imageUri || 'switch_logo',
+        large_text:  game.name || 'Nintendo Switch',
+        small_image: 'switch_logo',
+        small_text:  'Nintendo Switch',
+      },
+    };
+
+    // Splatoon 3 extras
+    const splat = presence?.splatoon3;
+    if (splat) {
+      const vsStage = splat?.vsSchedules?.regularSchedules?.nodes?.[0]?.vsRule?.name;
+      const maps    = splat?.vsSchedules?.regularSchedules?.nodes?.[0]?.vsStages?.map(s => s.name).join(' & ');
+      if (vsStage && maps) {
+        activity.state = `${vsStage} · ${maps}`;
+      }
+    }
+  }
+
+  // POST to Discord
+  const body = activity ? { activities: [activity] } : { activities: [] };
+
+  log(`Pushing activity: ${activity ? (activity.details || 'game') : 'clear'}`, 'info');
+
+  const res = await fetch(
+    `https://discord.com/api/v10/users/@me/headless-sessions`,
+    {
+      method:  'POST',
+      headers: {
+        Authorization: `Bearer ${State.discordToken.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  // The correct endpoint for activities.write OAuth2 is PUT /users/@me/activities
+  // Using the standard REST endpoint:
+  const res2 = await fetch(
+    `https://discord.com/api/v10/applications/${CONFIG.DISCORD_CLIENT_ID}/skus`,
+    { headers: { Authorization: `Bearer ${State.discordToken.access_token}` } }
+  );
+
+  // activities.write scope → update via the OAuth2 activity endpoint
+  const actRes = await fetch('https://discord.com/api/v10/users/@me/activities', {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${State.discordToken.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(activity ? { activity } : {}),
+  });
+
+  if (actRes.ok || actRes.status === 204) {
+    log('Activity updated on Discord.', 'success');
+  } else {
+    const errBody = await actRes.json().catch(() => ({}));
+    log(`Discord API error ${actRes.status}: ${JSON.stringify(errBody)}`, 'error');
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UI RENDERING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderProfile(user) {
+  if (!user) return;
+  const avatarUrl = user.imageUri || user.image?.url || '';
+  document.getElementById('profile-avatar').src = avatarUrl;
+  document.getElementById('profile-name').textContent = user.name || user.nickname || '—';
+
+  const fc = user.links?.friendCode?.id || user.friendCode || '';
+  document.getElementById('profile-fc').textContent = fc ? `SW-${fc}` : '';
+
+  if (State.discordUser) {
+    document.getElementById('profile-discord').textContent =
+      `@${State.discordUser.username}`;
+  }
+}
+
+function renderNowPlaying(presence) {
+  const container = document.getElementById('now-playing-content');
+  const game = presence?.presence?.game;
+  const isPlaying = presence?.presence?.state === 'PLAYING' || !!game;
+
+  // Status badges
+  document.getElementById('profile-status-badge').style.display = isPlaying ? '' : 'none';
+  document.getElementById('profile-offline-badge').style.display = isPlaying ? 'none' : '';
+  document.getElementById('nav-status').style.display = State.syncing ? '' : 'none';
+
+  if (!isPlaying || !game) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;">No game active — Switch is idle.</div>';
+    clearTimerInterval();
+
+    // Update Discord preview
+    document.getElementById('dp-game-name').textContent = '—';
+    document.getElementById('dp-state').textContent = 'Switch is idle';
+    document.getElementById('dp-time').textContent = '';
+    return;
+  }
+
+  // Game is active
+  if (State.currentGameId !== game.titleId) {
+    State.currentGameId = game.titleId;
+    State.gameStartedAt = Date.now();
+  }
+
+  const imgUrl = game.imageUri || game.shopUri || '';
+  container.innerHTML = `
+    <div style="display:flex;gap:1.2rem;align-items:center;">
+      ${imgUrl ? `<img src="${imgUrl}" alt="${game.name}" width="80" height="80" class="boxart" />` : ''}
+      <div>
+        <div style="font-weight:700;font-size:1.15rem;margin-bottom:0.3rem;">${game.name || 'Unknown Game'}</div>
+        <div class="badge badge-red" style="margin-bottom:0.6rem;">
+          <span class="pulse" style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;"></span>
+          Playing Now
+        </div>
+        <div class="timer" id="play-timer">00:00:00</div>
+      </div>
+    </div>
+  `;
+
+  // Discord preview
+  document.getElementById('dp-game-name').textContent = game.name || 'Nintendo Switch';
+  document.getElementById('dp-state').textContent = 'Playing on Nintendo Switch';
+
+  startTimerInterval();
+}
+
+function renderSplatoon(presence) {
+  const splat = presence?.splatoon3;
+  const card  = document.getElementById('card-splatoon');
+  const content = document.getElementById('splatoon-content');
+
+  if (!splat) {
+    card.classList.add('section-hidden');
+    return;
+  }
+
+  card.classList.remove('section-hidden');
+
+  const schedule = splat?.vsSchedules?.regularSchedules?.nodes?.[0];
+  const vsRule   = schedule?.vsRule?.name || 'Unknown Mode';
+  const stages   = schedule?.vsStages?.map(s => s.name).join(' & ') || 'Unknown Stages';
+  const festival = splat?.currentFest;
+
+  content.innerHTML = `
+    <div class="splat-badge">
+      <div style="font-size:1.6rem;">🦑</div>
+      <div>
+        <div style="font-weight:700;color:white;font-size:0.95rem;">Splatoon 3</div>
+        <div style="color:rgba(255,255,255,0.8);font-size:0.82rem;">${vsRule} · ${stages}</div>
+        ${festival ? `<div style="color:#FFE66D;font-size:0.75rem;margin-top:0.2rem;">🎉 ${festival.title} Splatfest Active!</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function startTimerInterval() {
+  clearTimerInterval();
+  State.timerInterval = setInterval(() => {
+    const el = document.getElementById('play-timer');
+    const dpTime = document.getElementById('dp-time');
+    if (!el || !State.gameStartedAt) return;
+    const elapsed = Math.floor((Date.now() - State.gameStartedAt) / 1000);
+    const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+    const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+    const s = String(elapsed % 60).padStart(2, '0');
+    const formatted = `${h}:${m}:${s}`;
+    el.textContent = formatted;
+    if (dpTime) dpTime.textContent = `Playing for ${formatted}`;
+  }, 1000);
+}
+
+function clearTimerInterval() {
+  if (State.timerInterval) {
+    clearInterval(State.timerInterval);
+    State.timerInterval = null;
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POLL LOOP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function poll() {
+  try {
+    log('Fetching Switch presence...', 'muted');
+    const presence = await fetchPresence();
+    if (!presence) { log('No presence data returned.', 'warn'); return; }
+
+    // Render profile from nxapi user data
+    const user = presence.user || presence;
+    renderProfile(user);
+    renderNowPlaying(presence);
+    renderSplatoon(presence);
+
+    if (State.syncing) {
+      await pushActivity(presence);
+    }
+  } catch(e) {
+    log(`Poll error: ${e.message}`, 'error');
+  }
+}
+
+function startPolling() {
+  stopPolling();
+  poll();
+  State.pollTimer = setInterval(poll, CONFIG.POLL_INTERVAL_MS);
+  log(`Polling started (every ${CONFIG.POLL_INTERVAL_MS / 1000}s).`, 'success');
+}
+
+function stopPolling() {
+  if (State.pollTimer) { clearInterval(State.pollTimer); State.pollTimer = null; }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// APP CONTROLLER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const App = {
+  async init() {
+    Store.load();
+
+    // 1. Handle OAuth2 callback code
+    const params = new URLSearchParams(window.location.search);
+    const code   = params.get('code');
+    if (code) {
+      window.history.replaceState({}, '', window.location.pathname);
+      try {
+        await exchangeCode(code);
+        await fetchDiscordUser();
+        Store.save();
+      } catch(e) {
+        log(`Auth error: ${e.message}`, 'error');
+        showView('landing');
+        return;
+      }
+    }
+
+    // 2. Determine which view to show
+    if (!State.discordToken) {
+      showView('landing');
+      return;
+    }
+
+    if (!State.nxapiUrl) {
+      showView('setup');
+      // Show disconnect button
+      document.getElementById('btn-disconnect').style.display = '';
+      return;
+    }
+
+    // 3. Full dashboard
+    this.showDashboard();
+  },
+
+  showDashboard() {
+    showView('dashboard');
+    document.getElementById('btn-disconnect').style.display = '';
+
+    // Render Discord user in profile area already
+    if (State.discordUser) {
+      document.getElementById('profile-discord').textContent = `@${State.discordUser.username}`;
+    }
+
+    // Restore sync toggle state
+    this.updateToggleUI();
+
+    // Pre-populate inputs with saved values (for modal)
+    document.getElementById('modal-nxapi-url').value   = State.nxapiUrl   || '';
+    document.getElementById('modal-nxapi-token').value = State.nxapiToken || '';
+
+    startPolling();
+
+    if (State.syncing) {
+      log('Sync resumed from previous session.', 'success');
+    } else {
+      log('Dashboard loaded. Sync is paused.', 'info');
+    }
+  },
+
+  async saveNxapiConfig(fromModal = false) {
+    const urlEl   = document.getElementById(fromModal ? 'modal-nxapi-url'   : 'input-nxapi-url');
+    const tokenEl = document.getElementById(fromModal ? 'modal-nxapi-token' : 'input-nxapi-token');
+    const url     = urlEl.value.trim();
+
+    if (!url) { alert('Please enter a valid URL.'); return; }
+
+    State.nxapiUrl   = url;
+    State.nxapiToken = tokenEl.value.trim() || null;
+
+    // Test connection
+    if (!fromModal) {
+      const statusEl = document.getElementById('setup-status');
+      statusEl.style.display = '';
+      statusEl.innerHTML = '<span style="color:var(--muted);">Testing connection…</span>';
+      try {
+        const data = await fetchPresence();
+        if (data) {
+          statusEl.innerHTML = '<span style="color:var(--green);">✓ Connected! Loading dashboard…</span>';
+          Store.save();
+          setTimeout(() => this.showDashboard(), 600);
+        }
+      } catch(e) {
+        statusEl.innerHTML = `<span style="color:var(--red);">✗ ${e.message}</span>`;
+        return;
+      }
+    } else {
+      Store.save();
+      this.closeModal();
+      poll();
+    }
+  },
+
+  toggleSync() {
+    State.syncing = !State.syncing;
+    Store.save();
+    this.updateToggleUI();
+    document.getElementById('nav-status').style.display = State.syncing ? '' : 'none';
+    if (State.syncing) {
+      log('Sync started — pushing presence to Discord.', 'success');
+      poll();
+    } else {
+      log('Sync paused.', 'warn');
+      // Clear Discord activity
+      fetch('https://discord.com/api/v10/users/@me/activities', {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${State.discordToken?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      }).catch(() => {});
+    }
+  },
+
+  updateToggleUI() {
+    const toggle = document.getElementById('toggle-sync');
+    const label  = document.getElementById('toggle-label');
+    if (State.syncing) {
+      toggle.classList.add('on');
+      label.textContent = 'Syncing';
+      label.style.color = 'var(--blue)';
+    } else {
+      toggle.classList.remove('on');
+      label.textContent = 'Paused';
+      label.style.color = 'var(--muted)';
+    }
+  },
+
+  fetchNow() {
+    log('Manual refresh triggered.', 'info');
+    poll();
+  },
+
+  clearLog() {
+    document.getElementById('terminal').innerHTML = '';
+  },
+
+  disconnect() {
+    if (!confirm('Disconnect and clear all saved session data?')) return;
+    stopPolling();
+    clearTimerInterval();
+    State.discordToken  = null;
+    State.discordUser   = null;
+    State.nxapiUrl      = null;
+    State.nxapiToken    = null;
+    State.syncing       = false;
+    State.currentGameId = null;
+    State.gameStartedAt = null;
+    Store.clear();
+    document.getElementById('btn-disconnect').style.display = 'none';
+    document.getElementById('nav-status').style.display = 'none';
+    showView('landing');
+  },
+
+  openModal() {
+    document.getElementById('modal-config').style.display = 'flex';
+  },
+
+  closeModal() {
+    document.getElementById('modal-config').style.display = 'none';
+  },
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// BOOT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>
